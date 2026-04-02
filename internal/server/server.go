@@ -1,86 +1,19 @@
 package server
-
-import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"time"
-
-	"github.com/stockyard-dev/stockyard-registry/internal/store"
-)
-
-type Server struct {
-	db  *store.DB
-	mux *http.ServeMux
-}
-
-func New(db *store.DB) *Server {
-	s := &Server{db: db, mux: http.NewServeMux()}
-	s.mux.HandleFunc("GET /api/packages", s.list)
-	s.mux.HandleFunc("POST /api/packages", s.create)
-	s.mux.HandleFunc("GET /api/packages/{id}", s.get)
-	s.mux.HandleFunc("DELETE /api/packages/{id}", s.del)
-	s.mux.HandleFunc("GET /api/health", s.health)
-	s.mux.HandleFunc("GET /api/stats", s.stats)
-	s.mux.HandleFunc("GET /ui", s.dashboard)
-	s.mux.HandleFunc("GET /ui/", s.dashboard)
-	s.mux.HandleFunc("GET /", s.root)
-	return s
-}
-
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.mux.ServeHTTP(w, r) }
-
-func wj(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
-}
-
-func we(w http.ResponseWriter, code int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
-}
-
-func (s *Server) root(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/" { http.Redirect(w, r, "/ui", http.StatusFound); return }
-	http.NotFound(w, r)
-}
-
-func (s *Server) health(w http.ResponseWriter, r *http.Request) {
-	wj(w, map[string]any{"status": "ok", "service": "stockyard-registry", "time": time.Now().UTC().Format(time.RFC3339)})
-}
-
-func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
-	wj(w, map[string]any{"packages": s.db.Count()})
-}
-
-func (s *Server) list(w http.ResponseWriter, r *http.Request) {
-	items := s.db.List()
-	if items == nil { items = []store.Package{} }
-	wj(w, map[string]any{"packages": items, "count": len(items)})
-}
-
-func (s *Server) create(w http.ResponseWriter, r *http.Request) {
-	var e store.Package
-	if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
-		we(w, 400, "invalid JSON"); return
-	}
-	if err := s.db.Create(&e); err != nil {
-		we(w, 500, fmt.Sprintf("create: %v", err)); return
-	}
-	w.WriteHeader(201)
-	wj(w, e)
-}
-
-func (s *Server) get(w http.ResponseWriter, r *http.Request) {
-	e := s.db.Get(r.PathValue("id"))
-	if e == nil { we(w, 404, "not found"); return }
-	wj(w, e)
-}
-
-func (s *Server) del(w http.ResponseWriter, r *http.Request) {
-	if err := s.db.Delete(r.PathValue("id")); err != nil {
-		we(w, 500, fmt.Sprintf("delete: %v", err)); return
-	}
-	wj(w, map[string]string{"status": "deleted"})
-}
+import ("encoding/json";"log";"net/http";"github.com/stockyard-dev/stockyard-registry/internal/store")
+type Server struct{db *store.DB;mux *http.ServeMux}
+func New(db *store.DB)*Server{s:=&Server{db:db,mux:http.NewServeMux()}
+s.mux.HandleFunc("GET /api/services",s.list);s.mux.HandleFunc("POST /api/services",s.create);s.mux.HandleFunc("GET /api/services/{id}",s.get);s.mux.HandleFunc("DELETE /api/services/{id}",s.del)
+s.mux.HandleFunc("GET /api/stats",s.stats);s.mux.HandleFunc("GET /api/health",s.health)
+s.mux.HandleFunc("GET /ui",s.dashboard);s.mux.HandleFunc("GET /ui/",s.dashboard);s.mux.HandleFunc("GET /",s.root);return s}
+func(s *Server)ServeHTTP(w http.ResponseWriter,r *http.Request){s.mux.ServeHTTP(w,r)}
+func wj(w http.ResponseWriter,c int,v any){w.Header().Set("Content-Type","application/json");w.WriteHeader(c);json.NewEncoder(w).Encode(v)}
+func we(w http.ResponseWriter,c int,m string){wj(w,c,map[string]string{"error":m})}
+func(s *Server)root(w http.ResponseWriter,r *http.Request){if r.URL.Path!="/"{http.NotFound(w,r);return};http.Redirect(w,r,"/ui",302)}
+func(s *Server)list(w http.ResponseWriter,r *http.Request){wj(w,200,map[string]any{"services":oe(s.db.List())})}
+func(s *Server)create(w http.ResponseWriter,r *http.Request){var e store.Service;json.NewDecoder(r.Body).Decode(&e);if e.Name==""{we(w,400,"name required");return};s.db.Create(&e);wj(w,201,s.db.Get(e.ID))}
+func(s *Server)get(w http.ResponseWriter,r *http.Request){e:=s.db.Get(r.PathValue("id"));if e==nil{we(w,404,"not found");return};wj(w,200,e)}
+func(s *Server)del(w http.ResponseWriter,r *http.Request){s.db.Delete(r.PathValue("id"));wj(w,200,map[string]string{"deleted":"ok"})}
+func(s *Server)stats(w http.ResponseWriter,r *http.Request){wj(w,200,map[string]int{"services":s.db.Count()})}
+func(s *Server)health(w http.ResponseWriter,r *http.Request){wj(w,200,map[string]any{"status":"ok","service":"registry","services":s.db.Count()})}
+func oe[T any](s []T)[]T{if s==nil{return[]T{}};return s}
+func init(){log.SetFlags(log.LstdFlags|log.Lshortfile)}

@@ -1,48 +1,19 @@
 package server
-
 import "net/http"
-
-func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(dashHTML))
-}
-
-const dashHTML = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Registry</title>
-<style>
-:root{--bg:#1a1410;--bg2:#241e18;--bg3:#2e261e;--rust:#c45d2c;--rl:#e8753a;--leather:#a0845c;--cream:#f0e6d3;--cd:#bfb5a3;--cm:#7a7060;--gold:#d4a843;--green:#4a9e5c;--red:#c44040;--mono:'JetBrains Mono',monospace;--serif:'Libre Baskerville',Georgia,serif}
-*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--cream);font-family:var(--mono);font-size:13px}
-a{color:var(--rl);text-decoration:none}a:hover{color:var(--gold)}
-.hdr{padding:.7rem 1.2rem;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-between;align-items:center}
-.hdr h1{font-family:var(--serif);font-size:1rem}.hdr h1 span{color:var(--rl)}
-.stats{font-size:.7rem;color:var(--leather)}.stats b{color:var(--cream);font-weight:600}
-.main{max-width:700px;margin:0 auto;padding:1.5rem}
-.card{background:var(--bg2);border:1px solid var(--bg3);padding:.8rem 1rem;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center}
-.card-title{font-size:.8rem;font-weight:600}.card-sub{font-size:.65rem;color:var(--cd)}
-.btn{font-family:var(--mono);font-size:.7rem;padding:.3rem .6rem;border:1px solid;cursor:pointer;background:transparent}
-.btn-p{border-color:var(--rust);color:var(--rl)}.btn-p:hover{background:var(--rust);color:var(--cream)}
-.btn-d{border-color:var(--bg3);color:var(--cm)}.btn-d:hover{border-color:var(--red);color:var(--red)}
-input{background:var(--bg);border:1px solid var(--bg3);color:var(--cream);padding:.4rem .6rem;font-family:var(--mono);font-size:.8rem;width:100%;outline:none;margin-bottom:.5rem}
-input:focus{border-color:var(--rust)}
-.empty{text-align:center;padding:2rem;color:var(--cm);font-style:italic;font-family:var(--serif)}
-</style>
+func(s *Server)dashboard(w http.ResponseWriter,r *http.Request){w.Header().Set("Content-Type","text/html; charset=utf-8");w.Write([]byte(dashHTML))}
+const dashHTML=`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Registry</title>
+<style>:root{--bg:#1a1410;--bg2:#241e18;--bg3:#2e261e;--rust:#c45d2c;--rl:#e8753a;--leather:#a0845c;--cream:#f0e6d3;--cd:#bfb5a3;--cm:#7a7060;--gold:#d4a843;--green:#4a9e5c;--mono:'JetBrains Mono',Consolas,monospace;--serif:'Libre Baskerville',Georgia,serif}*{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--cream);font-family:var(--mono);font-size:13px;line-height:1.6}.hdr{padding:.6rem 1.2rem;border-bottom:1px solid var(--bg3);display:flex;justify-content:space-between;align-items:center}.hdr h1{font-family:var(--serif);font-size:1rem}.hdr h1 span{color:var(--rl)}.main{max-width:700px;margin:0 auto;padding:1rem}.btn{font-family:var(--mono);font-size:.68rem;padding:.3rem .6rem;border:1px solid;cursor:pointer;background:transparent}.btn-p{border-color:var(--rust);color:var(--rl)}.btn-p:hover{background:var(--rust);color:var(--cream)}.item{background:var(--bg2);border:1px solid var(--bg3);padding:.6rem;margin-bottom:.3rem}.item h3{font-size:.82rem;margin-bottom:.15rem}.item-meta{font-size:.65rem;color:var(--cm);display:flex;gap:.5rem;flex-wrap:wrap}.empty{text-align:center;padding:2rem;color:var(--cm);font-style:italic;font-family:var(--serif)}.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:100}.modal{background:var(--bg2);border:1px solid var(--bg3);padding:1.5rem;width:90%;max-width:500px;max-height:90vh;overflow-y:auto}.modal h2{font-family:var(--serif);font-size:.9rem;margin-bottom:1rem}label.fl{display:block;font-size:.65rem;color:var(--leather);text-transform:uppercase;letter-spacing:1px;margin-bottom:.2rem;margin-top:.5rem}input[type=text],input[type=number]{background:var(--bg);border:1px solid var(--bg3);color:var(--cream);padding:.35rem .5rem;font-family:var(--mono);font-size:.78rem;width:100%;outline:none}</style>
 <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-</head><body>
-<div class="hdr"><h1><span>Registry</span></h1><div class="stats">Total: <b id="ct">-</b></div></div>
-<div class="main">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-<span style="font-size:.65rem;letter-spacing:2px;text-transform:uppercase;color:var(--rust)">All packages</span>
-<button class="btn btn-p" onclick="showCreate()">+ New</button>
-</div>
-<div id="list"></div>
-</div>
+</head><body><div class="hdr"><h1><span>Registry</span></h1><button class="btn btn-p" onclick="showNew()">+ Service</button></div>
+<div class="main"><div id="list"></div></div><div id="modal"></div>
 <script>
-async function load(){const r=await fetch('/api/packages');const d=await r.json();document.getElementById('ct').textContent=d.count;
-const el=document.getElementById('list');if(!d.packages.length){el.innerHTML='<div class="empty">No packages yet.</div>';return}
-el.innerHTML=d.packages.map(e=>'<div class="card"><div><div class="card-title">'+esc(e.name||e.title||e.id)+'</div><div class="card-sub">'+esc(e.created_at)+'</div></div><button class="btn btn-d" onclick="del(\''+e.id+'\')">Delete</button></div>').join('')}
-function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}
-function showCreate(){const n=prompt('Name:');if(!n)return;fetch('/api/packages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})}).then(load)}
-async function del(id){if(!confirm('Delete?'))return;await fetch('/api/packages/'+id,{method:'DELETE'});load()}
-load();setInterval(load,30000)
-</script></body></html>` + "`"
+async function api(u,o){return(await fetch(u,o)).json()}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+async function load(){const d=await api('/api/services');const items=d.services||[];
+document.getElementById('list').innerHTML=items.length?items.map(e=>'<div class="item"><h3>'+esc(e.name)+'</h3><div class="item-meta">'+'<span style="color:var(--cm);font-size:.65rem">'+esc(String(e.name)||'')+'</span>'+'<span style="color:var(--cm);font-size:.65rem">'+esc(String(e.version)||'')+'</span>'+'<span style="color:var(--cm);font-size:.65rem">'+esc(String(e.url)||'')+'</span>'+'<span style="cursor:pointer;color:var(--cm)" onclick="del(\''+e.id+'\')">del</span></div></div>').join(''):'<div class="empty">No services yet.</div>'}
+async function del(id){await api('/api/services/'+id,{method:'DELETE'});load()}
+function showNew(){document.getElementById('modal').innerHTML='<div class="modal-bg" onclick="if(event.target===this)closeModal()"><div class="modal"><h2>New Service</h2><label class="fl">Name</label><input type="text" id="n-name"><label class="fl">Version</label><input type="text" id="n-version"><label class="fl">URL</label><input type="text" id="n-url"><label class="fl">Type</label><input type="text" id="n-type"><label class="fl">Status</label><input type="text" id="n-status"><label class="fl">Tags</label><input type="text" id="n-tags"><div style="display:flex;gap:.5rem;margin-top:1rem"><button class="btn btn-p" onclick="save()">Create</button><button class="btn" style="border-color:var(--bg3);color:var(--cm)" onclick="closeModal()">Cancel</button></div></div></div>'}
+async function save(){const b={name:(document.getElementById("n-name").value),version:(document.getElementById("n-version").value),url:(document.getElementById("n-url").value),type:(document.getElementById("n-type").value),status:(document.getElementById("n-status").value),tags:(document.getElementById("n-tags").value)};await api('/api/services',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});closeModal();load()}
+function closeModal(){document.getElementById('modal').innerHTML=''}
+load()
+</script></body></html>`
